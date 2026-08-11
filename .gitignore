@@ -1,0 +1,6 @@
+state/
+*.bak
+*.bak2
+*.pre*
+*.UNUSED
+node_modules/
