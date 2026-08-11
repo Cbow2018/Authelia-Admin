@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Athenaeus — User Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 1.25rem; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  h1 { font-size: 1.4rem; font-weight: 600; color: #fff; }
+  h1 span { color: #818cf8; }
+  .btn { padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: opacity 0.15s; white-space: nowrap; }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #818cf8; color: #fff; }
+  .btn-danger  { background: #ef4444; color: #fff; }
+  .btn-warning { background: #f59e0b; color: #fff; }
+  .btn-info    { background: #0ea5e9; color: #fff; }
+  .btn-ghost   { background: #1e2130; color: #94a3b8; border: 1px solid #2d3348; }
+  .card { background: #1a1d2e; border: 1px solid #2d3348; border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 0.85rem 1.2rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 1px solid #2d3348; }
+  td { padding: 1rem 1.2rem; border-bottom: 1px solid #1e2130; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #1e2130; }
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
+  .badge-active   { background: #052e16; color: #4ade80; }
+  .badge-disabled { background: #1c1917; color: #78716c; }
+  .badge-admin    { background: #1e1b4b; color: #818cf8; }
+  .badge-user     { background: #162032; color: #38bdf8; }
+  .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #1a1d2e; border: 1px solid #2d3348; border-radius: 14px; padding: 1.8rem; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 1.1rem; margin-bottom: 1.2rem; color: #fff; }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem; }
+  .field input, .field select { width: 100%; padding: 0.6rem 0.8rem; background: #0f1117; border: 1px solid #2d3348; border-radius: 8px; color: #e2e8f0; font-size: 0.9rem; }
+  .field input:focus, .field select:focus { outline: none; border-color: #818cf8; }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.4rem; flex-wrap: wrap; }
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; left: 1.5rem; background: #1a1d2e; border: 1px solid #2d3348; border-radius: 10px; padding: 0.8rem 1.2rem; font-size: 0.85rem; display: none; z-index: 200; max-width: 400px; margin-left: auto; }
+  .toast.show { display: block; }
+  .toast.success { border-color: #4ade80; color: #4ade80; }
+  .toast.error   { border-color: #ef4444; color: #ef4444; }
+  .empty { padding: 2rem; text-align: center; color: #475569; font-size: 0.9rem; }
+  /* ponytail: card-based mobile layout via CSS display:block trick; breaks if <table> semantics relied on elsewhere */
+  @media (max-width: 720px) {
+    body { padding: 1rem 0.75rem; }
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    .card { background: transparent; border: none; overflow: visible; }
+    tr { background: #1a1d2e; border: 1px solid #2d3348; border-radius: 12px; margin-bottom: 1rem; padding: 0.35rem 0; }
+    tr:hover td { background: transparent; }
+    td { border-bottom: 1px solid #1e2130; padding: 0.7rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    td::before { content: attr(data-label); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; flex-shrink: 0; }
+    td:last-child { border-bottom: none; }
+    td .actions { justify-content: flex-end; }
+    td.cell-user { flex-direction: column; align-items: flex-start; }
+    td.cell-user::before { margin-bottom: 0.2rem; }
+    .actions .btn { flex: 1; text-align: center; min-width: 70px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Athenaeus <span>/ Users</span></h1>
+  <button class="btn btn-primary" onclick="openAdd()">+ Add User</button>
+  <button class="btn btn-ghost" onclick="openImport()">Import Backup</button>
+</header>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>User</th><th>Email</th><th>Groups</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="userTable">
+      <tr><td colspan="5" class="empty">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h2>Add User</h2>
+    <div class="field"><label>Username</label><input id="f-username" placeholder="jsmith" /></div>
+    <div class="field"><label>Display Name</label><input id="f-displayname" placeholder="John Smith" /></div>
+    <div class="field"><label>Email</label><input id="f-email" type="email" placeholder="john@example.com" /></div>
+    <div class="field"><label>Password</label><input id="f-password" type="password" placeholder="Leave blank to email an invite" /></div>
+    <div class="field">
+      <label>Group</label>
+      <select id="f-group">
+        <option value="users">users</option>
+        <option value="admins">admins</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAdd()">Cancel</button>
+      <button class="btn btn-primary" onclick="addUser(this)">Create User</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h2>Edit User</h2>
+    <div class="field"><label>Username</label><input id="e-username" placeholder="jsmith" /></div>
+    <div class="field"><label>Display Name</label><input id="e-displayname" placeholder="John Smith" /></div>
+    <div class="field"><label>Email</label><input id="e-email" type="email" placeholder="john@example.com" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit(this)">Save</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="pwModal">
+  <div class="modal">
+    <h2>Reset Password</h2>
+    <div class="field"><label>New Password</label><input id="pw-new" type="password" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closePw()">Cancel</button>
+      <button class="btn btn-primary" onclick="resetPassword(this)">Update</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="importModal">
+  <div class="modal">
+    <h2>Import from Backup</h2>
+    <p style="color:#94a3b8;font-size:0.9em;margin-top:0">Existing users are skipped. New users receive an invite email and set their own password. Two-factor devices are not restored.</p>
+    <div class="field"><label>Backup File</label><input id="imp-file" type="file" accept=".gpg" /></div>
+    <div class="field"><label>Passphrase</label><input id="imp-pass" type="password" /></div>
+    <div id="imp-result" style="color:#94a3b8;font-size:0.9em"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeImport()">Cancel</button>
+      <button class="btn btn-primary" id="imp-go">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentPwUser = null;
+let currentEditUser = null;
+let csrfToken = null;
+let lastFocusedEl = null;
+
+// Critical fix: HTML-entity escape everything interpolated into innerHTML.
+// (s ?? '') guards against null/undefined displayname/email rendering as the string "null".
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"'`]/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;',
+  }[c]));
+}
+
+async function fetchCsrfToken() {
+  try {
+    const res = await fetch('/api/csrf-token');
+    if (res.ok) csrfToken = (await res.json()).token;
+  } catch (err) {
+    console.error('Failed to fetch CSRF token', err);
+  }
+}
+
+// Central fetch wrapper: attaches the CSRF header on mutating calls, checks
+// res.ok (not just body.error), and never triggers a reload/success toast
+// unless the request actually succeeded.
+async function apiCall(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const headers = Object.assign({}, options.headers);
+  if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  try {
+    const res = await fetch(url, { ...options, headers });
+    let data = null;
+    try { data = await res.json(); } catch { /* non-JSON body */ }
+    if (!res.ok || (data && data.error)) {
+      showToast((data && data.error) || `Request failed (${res.status})`, 'error');
+      return { ok: false, data };
+    }
+    return { ok: true, data };
+  } catch (err) {
+    showToast('Network error — please try again', 'error');
+    return { ok: false, data: null };
+  }
+}
+
+async function loadUsers() {
+  const tbody = document.getElementById('userTable');
+  const { ok, data: users } = await apiCall('/api/users');
+  if (!ok) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Failed to load users</td></tr>';
+    return;
+  }
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No users found</td></tr>';
+    return;
+  }
+  // ponytail: innerHTML rebuild fine for <100 users; skip virtual DOM/diffing
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td class="cell-user" data-label="User"><div><strong>${esc(u.displayname)}</strong><br><small style="color:#64748b">${esc(u.username)}</small></div></td>
+      <td data-label="Email" style="color:#94a3b8">${esc(u.email)}</td>
+      <td data-label="Groups">${u.groups.map(g => `<span class="badge ${g === 'admins' ? 'badge-admin' : 'badge-user'}">${esc(g)}</span>`).join(' ')}</td>
+      <td data-label="Status"><span class="badge ${u.disabled ? 'badge-disabled' : 'badge-active'}">${u.disabled ? 'Disabled' : 'Active'}</span></td>
+      <td data-label="Actions">
+        <div class="actions">
+          <button class="btn btn-info" data-action="edit" data-username="${esc(u.username)}" data-displayname="${esc(u.displayname)}" data-email="${esc(u.email)}">Edit</button>
+          <button class="btn btn-ghost" data-action="toggle" data-username="${esc(u.username)}">${u.disabled ? 'Enable' : 'Disable'}</button>
+          <button class="btn btn-warning" data-action="reset-pw" data-username="${esc(u.username)}">Reset PW</button>
+          ${u.pending ? `<button class="btn btn-ghost" data-action="invite" data-username="${esc(u.username)}">Resend Invite</button>` : ''}
+          <button class="btn btn-danger" data-action="delete" data-username="${esc(u.username)}">Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Event delegation: user data never touches an inline onclick string, so
+// there's no HTML+JS context-mixing to get wrong (was the root cause of the
+// escAttr bug). Values arrive already HTML-decoded via .dataset.
+document.getElementById('userTable').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn || btn.disabled) return;
+  const { action, username, displayname, email } = btn.dataset;
+  if (action === 'edit') { openEdit(username, displayname, email); return; }
+  if (action === 'reset-pw') { openPw(username); return; }
+  if (action === 'delete') {
+    // note: confirm() is UX only, not a security boundary — the server enforces auth either way
+    if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+  }
+  btn.disabled = true;
+  try {
+    if (action === 'toggle') {
+      const { ok, data } = await apiCall(`/api/users/${encodeURIComponent(username)}/toggle`, { method: 'PATCH' });
+      if (ok) afterChange(`User ${data.disabled ? 'disabled' : 'enabled'}`);
+    } else if (action === 'invite') {
+      const { ok } = await apiCall(`/api/users/${encodeURIComponent(username)}/invite`, { method: 'POST' });
+      if (ok) afterChange('Invite email sent');
+    } else if (action === 'delete') {
+      const { ok } = await apiCall(`/api/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+      if (ok) afterChange('User deleted');
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function afterChange(msg) {
+  showToast(msg, 'success');
+  setTimeout(loadUsers, 2000);
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 4000);
+}
+
+// --- Modal open/close with focus management -------------------------------
+function openModal(id) {
+  lastFocusedEl = document.activeElement;
+  const modal = document.getElementById(id);
+  modal.classList.add('open');
+  const focusable = modal.querySelectorAll('input, select, button');
+  if (focusable.length) focusable[0].focus();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (lastFocusedEl) lastFocusedEl.focus();
+}
+document.addEventListener('keydown', (e) => {
+  const openEl = document.querySelector('.modal-bg.open');
+  if (!openEl) return;
+  if (e.key === 'Escape') { closeModal(openEl.id); return; }
+  if (e.key !== 'Tab') return;
+  const focusable = Array.from(openEl.querySelectorAll('input, select, button')).filter(el => !el.disabled);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
+function openAdd() {
+  document.getElementById('f-username').value = '';
+  document.getElementById('f-displayname').value = '';
+  document.getElementById('f-email').value = '';
+  document.getElementById('f-password').value = '';
+  document.getElementById('f-group').value = 'users';
+  openModal('addModal');
+}
+function closeAdd() { closeModal('addModal'); }
+
+function openPw(u) {
+  currentPwUser = u;
+  document.getElementById('pw-new').value = '';
+  openModal('pwModal');
+}
+function closePw() { currentPwUser = null; closeModal('pwModal'); }
+
+function openEdit(username, displayname, email) {
+  currentEditUser = username;
+  document.getElementById('e-username').value = username;
+  document.getElementById('e-displayname').value = displayname;
+  document.getElementById('e-email').value = email;
+  openModal('editModal');
+}
+function closeEdit() { currentEditUser = null; closeModal('editModal'); }
+
+// --- Form submit actions (button passed in for debounce/disable) ----------
+async function addUser(btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const body = {
+      username: document.getElementById('f-username').value.trim(),
+      displayname: document.getElementById('f-displayname').value.trim(),
+      email: document.getElementById('f-email').value.trim(),
+      ...(document.getElementById('f-password').value ? { password: document.getElementById('f-password').value } : {}),
+      groups: [document.getElementById('f-group').value],
+    };
+    const { ok } = await apiCall('/api/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (ok) { closeAdd(); afterChange('User created'); }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function saveEdit(btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const body = {
+      newUsername: document.getElementById('e-username').value.trim(),
+      displayname: document.getElementById('e-displayname').value.trim(),
+      email: document.getElementById('e-email').value.trim(),
+    };
+    const { ok } = await apiCall(`/api/users/${encodeURIComponent(currentEditUser)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (ok) { closeEdit(); afterChange('User updated'); }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function resetPassword(btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const password = document.getElementById('pw-new').value;
+    const { ok } = await apiCall(`/api/users/${encodeURIComponent(currentPwUser)}/password`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }),
+    });
+    if (ok) { closePw(); afterChange('Password updated'); }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+fetchCsrfToken();
+loadUsers();
+
+function openImport() {
+  document.getElementById('imp-file').value = '';
+  document.getElementById('imp-pass').value = '';
+  document.getElementById('imp-result').textContent = '';
+  openModal('importModal');
+}
+function closeImport() { closeModal('importModal'); }
+
+document.getElementById('imp-go').addEventListener('click', async (e) => {
+  const fileEl = document.getElementById('imp-file');
+  const out = document.getElementById('imp-result');
+  if (!fileEl.files.length) { out.textContent = 'Choose a backup file first.'; return; }
+  const btn = e.target;
+  btn.disabled = true;
+  out.textContent = 'Importing...';
+  const fd = new FormData();
+  fd.append('backup', fileEl.files[0]);
+  fd.append('passphrase', document.getElementById('imp-pass').value);
+  try {
+    const { ok, data } = await apiCall('/api/import', { method: 'POST', body: fd });
+    if (ok) {
+      out.textContent = 'Added ' + data.added.length + ', invited ' + data.invited.length + ', skipped ' + data.skipped.length + (data.failed.length ? ', failed ' + data.failed.length : '');
+      loadUsers();
+    } else {
+      out.textContent = '';
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+</script>
+<footer style="margin-top:2rem;padding:1.25rem 0;text-align:center;border-top:1px solid #2d3348;"><a href="http://192.168.0.15:8098/admin/" target="_blank" rel="noopener" class="btn btn-info">Yamtrack Django Admin</a></footer>
+</body>
+</html>
