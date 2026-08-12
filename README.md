@@ -45,7 +45,7 @@ Put the app on a dedicated Docker network shared only with the proxy and Autheli
 ## Features
 
 - List, add, edit, enable/disable and delete users
-- **Email invites** — leave the password blank on creation and the user receives an Authelia password-reset email to set their own
+- **Email invites** — leave the password blank on creation and the user receives an Authelia password reset email to set their own
 - **Resend invite**, shown only for users who haven't yet set a password
 - **Import from backup** — upload an encrypted archive and recreate missing users, each with a fresh invite
 - CSRF protection, rate limiting on sensitive routes, and admin-only write access
@@ -85,13 +85,13 @@ networks:
     external: true
 ```
 
-Mount only `users_database.yml`, not the whole Authelia config directory — that directory also holds your JWT secret, session secret, storage encryption key and OIDC private keys, none of which this app needs.
+Mount only `users_database.yml`, not the whole Authelia config directory. That directory also holds your JWT secret, session secret, storage encryption key and OIDC private keys, none of which this app needs.
 
 The `state` directory holds `pending.json`, which tracks which users have been invited but haven't set a password yet. It contains bcrypt hashes, so keep it out of version control.
 
 ### Invite lifespan
 
-Invites use Authelia's password-reset flow, so the link expires after `identity_validation.reset_password.jwt_lifespan` (default 5 minutes). Worth raising for invites:
+Invites use Authelia's password reset flow, so the link expires after `identity_validation.reset_password.jwt_lifespan` (default 5 minutes). Worth raising for invites:
 
 ```yaml
 identity_validation:
