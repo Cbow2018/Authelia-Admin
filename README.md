@@ -57,6 +57,7 @@ Put the app on a dedicated Docker network shared only with the proxy and Autheli
 - `authentication_backend.password_reset.disable: false`
 - A reverse proxy configured as described above
 - SMTP configured in Authelia (invites use Authelia's own notifier)
+- Optional - A backup process that formats in a .tar.gz file (Built in coming soon)
 
 ## Setup
 
