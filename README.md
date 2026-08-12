@@ -103,6 +103,8 @@ Note that this affects ordinary password resets too.
 
 ## Backup format
 
+This app does not create backups. It only reads them. You need your own backup process.
+
 The import expects a GPG symmetrically-encrypted gzipped tarball containing `users_database.yml` at the root:
 
 ```bash
